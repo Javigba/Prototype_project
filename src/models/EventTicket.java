@@ -22,7 +22,7 @@ public class EventTicket implements models.Ticket, Cloneable {
 
     @Override
     public String getDetails() {
-        return String.format("Evento: %s, Categoría: %s, Precio: $%.2f",
+        return String.format("Evento: %s, Categoría: %s, Precio: %.2f€",
                 eventName, seatCategory, price);
     }
 }
