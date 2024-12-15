@@ -1,31 +1,142 @@
-package services;
+package ui;
 
 import models.EventTicket;
 import models.Ticket;
+import services.TicketManager;
 
-import java.util.ArrayList;
+import javax.swing.*;
+import java.awt.*;
 import java.util.List;
 
-public class TicketManagerUI implements services.CloneableService {
-    private final List<Ticket> tickets;
+public class TicketManagerUI extends JFrame {
+    private final TicketManager ticketManager;
+    private final DefaultListModel<String> listModel;
 
-    public TicketManagerUI() {
-        this.tickets = new ArrayList<>();
+    public TicketManagerUI(TicketManager ticketManager) {
+        this.ticketManager = ticketManager;
+        this.listModel = new DefaultListModel<>();
+
+        setTitle("Gestión de Tickets de Eventos");
+        setSize(500, 400);
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
+
+        // Panel de lista
+        JList<String> ticketList = new JList<>(listModel);
+        JScrollPane scrollPane = new JScrollPane(ticketList);
+        add(scrollPane, BorderLayout.CENTER);
+
+        // Panel de botones
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setLayout(new GridLayout(1, 2));
+
+        JButton addTicketButton = new JButton("Añadir Ticket");
+        JButton cloneTicketButton = new JButton("Clonar Ticket");
+
+        buttonPanel.add(addTicketButton);
+        buttonPanel.add(cloneTicketButton);
+
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        // Acciones de los botones
+        addTicketButton.addActionListener(e -> showAddTicketDialog());
+        cloneTicketButton.addActionListener(e -> showCloneTicketDialog(ticketList.getSelectedIndex()));
+
+        updateTicketList();
     }
 
-    public void addTicket(Ticket ticket) {
-        tickets.add(ticket);
-    }
+    private void showAddTicketDialog() {
+        JPanel inputPanel = new JPanel(new GridLayout(3, 2));
+        JTextField eventNameField = new JTextField();
+        JTextField seatCategoryField = new JTextField();
+        JTextField priceField = new JTextField();
 
-    @Override
-    public Ticket cloneTicket(Ticket ticket) {
-        if (ticket instanceof Cloneable) {
-            return ((Ticket) ((EventTicket) ticket).clone());
+        inputPanel.add(new JLabel("Nombre del Evento:"));
+        inputPanel.add(eventNameField);
+        inputPanel.add(new JLabel("Categoría del Asiento:"));
+        inputPanel.add(seatCategoryField);
+        inputPanel.add(new JLabel("Precio:"));
+        inputPanel.add(priceField);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                inputPanel,
+                "Añadir Nuevo Ticket",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String eventName = eventNameField.getText().trim();
+                String seatCategory = seatCategoryField.getText().trim();
+                double price = Double.parseDouble(priceField.getText().trim());
+
+                if (eventName.isEmpty() || seatCategory.isEmpty()) {
+                    throw new IllegalArgumentException("El nombre del evento y la categoría no pueden estar vacíos.");
+                }
+
+                Ticket newTicket = new EventTicket(eventName, seatCategory, price);
+                ticketManager.addTicket(newTicket);
+                updateTicketList();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
-        throw new UnsupportedOperationException("El ticket no es clonable.");
     }
 
-    public List<Ticket> getTickets() {
-        return new ArrayList<>(tickets);
+    private void showCloneTicketDialog(int index) {
+        if (index < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un ticket para clonar.");
+            return;
+        }
+
+        // Panel para seleccionar el número de clones
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.add(new JLabel("Número de clones:"), BorderLayout.NORTH);
+
+        // Crear un JSpinner para ajustar el número de clones
+        SpinnerNumberModel spinnerModel = new SpinnerNumberModel(1, 1, 1000000, 1);
+        JSpinner cloneCountSpinner = new JSpinner(spinnerModel);
+        inputPanel.add(cloneCountSpinner, BorderLayout.CENTER);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                inputPanel,
+                "Clonar Ticket",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            int cloneCount = (int) cloneCountSpinner.getValue();
+            cloneSelectedTicket(index, cloneCount);
+        }
+    }
+
+    private void cloneSelectedTicket(int index, int cloneCount) {
+        List<Ticket> tickets = ticketManager.getTickets();
+        Ticket originalTicket = tickets.get(index);
+
+        for (int i = 0; i < cloneCount; i++) {
+            try {
+                Ticket clonedTicket = ticketManager.cloneTicket(originalTicket);
+                ticketManager.addTicket(clonedTicket);
+            } catch (UnsupportedOperationException e) {
+                JOptionPane.showMessageDialog(this, "El ticket no se puede clonar.");
+                return;
+            }
+        }
+
+        updateTicketList();
+    }
+
+    private void updateTicketList() {
+        listModel.clear();
+        for (Ticket ticket : ticketManager.getTickets()) {
+            listModel.addElement(ticket.getDetails());
+        }
     }
 }
