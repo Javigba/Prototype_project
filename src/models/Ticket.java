@@ -1,5 +1,5 @@
 package models;
 
-public class Ticket {
+public interface Ticket {
     String getDetails();
 }
