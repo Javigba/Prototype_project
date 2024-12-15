@@ -5,6 +5,7 @@ public class EventTicket implements models.Ticket, Cloneable {
     private String seatCategory;
     private double price;
 
+
     public EventTicket(String eventName, String seatCategory, double price) {
         this.eventName = eventName;
         this.seatCategory = seatCategory;
