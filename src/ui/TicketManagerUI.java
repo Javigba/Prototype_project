@@ -28,19 +28,22 @@ public class TicketManagerUI extends JFrame {
 
         // Panel de botones
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setLayout(new GridLayout(1, 2));
+        buttonPanel.setLayout(new GridLayout(1, 3));
 
         JButton addTicketButton = new JButton("Añadir Ticket");
         JButton cloneTicketButton = new JButton("Clonar Ticket");
+        JButton editTicketButton = new JButton("Editar Ticket");
 
         buttonPanel.add(addTicketButton);
         buttonPanel.add(cloneTicketButton);
+        buttonPanel.add(editTicketButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
 
         // Acciones de los botones
         addTicketButton.addActionListener(e -> showAddTicketDialog());
         cloneTicketButton.addActionListener(e -> showCloneTicketDialog(ticketList.getSelectedIndex()));
+        editTicketButton.addActionListener(e -> showEditTicketDialog(ticketList.getSelectedIndex()));
 
         updateTicketList();
     }
@@ -93,12 +96,10 @@ public class TicketManagerUI extends JFrame {
             return;
         }
 
-        // Panel para seleccionar el número de clones
         JPanel inputPanel = new JPanel(new BorderLayout());
         inputPanel.add(new JLabel("Número de clones:"), BorderLayout.NORTH);
 
-        // Crear un JSpinner para ajustar el número de clones
-        SpinnerNumberModel spinnerModel = new SpinnerNumberModel(1, 1, 1000000, 1);
+        SpinnerNumberModel spinnerModel = new SpinnerNumberModel(1, 1, 100, 1);
         JSpinner cloneCountSpinner = new JSpinner(spinnerModel);
         inputPanel.add(cloneCountSpinner, BorderLayout.CENTER);
 
@@ -131,6 +132,63 @@ public class TicketManagerUI extends JFrame {
         }
 
         updateTicketList();
+    }
+
+    private void showEditTicketDialog(int index) {
+        if (index < 0) {
+            JOptionPane.showMessageDialog(this, "Selecciona un ticket para editar.");
+            return;
+        }
+
+        List<Ticket> tickets = ticketManager.getTickets();
+        Ticket ticket = tickets.get(index);
+
+        if (!(ticket instanceof EventTicket)) {
+            JOptionPane.showMessageDialog(this, "El ticket seleccionado no es editable.");
+            return;
+        }
+
+        EventTicket eventTicket = (EventTicket) ticket;
+
+        JPanel inputPanel = new JPanel(new GridLayout(3, 2));
+        JTextField eventNameField = new JTextField(eventTicket.getEventName());
+        JTextField seatCategoryField = new JTextField(eventTicket.getSeatCategory());
+        JTextField priceField = new JTextField(String.valueOf(eventTicket.getPrice()));
+
+        inputPanel.add(new JLabel("Nombre del Evento:"));
+        inputPanel.add(eventNameField);
+        inputPanel.add(new JLabel("Categoría del Asiento:"));
+        inputPanel.add(seatCategoryField);
+        inputPanel.add(new JLabel("Precio:"));
+        inputPanel.add(priceField);
+
+        int result = JOptionPane.showConfirmDialog(
+                this,
+                inputPanel,
+                "Editar Ticket",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                String eventName = eventNameField.getText().trim();
+                String seatCategory = seatCategoryField.getText().trim();
+                double price = Double.parseDouble(priceField.getText().trim());
+
+                if (eventName.isEmpty() || seatCategory.isEmpty()) {
+                    throw new IllegalArgumentException("El nombre del evento y la categoría no pueden estar vacíos.");
+                }
+
+                Ticket updatedTicket = new EventTicket(eventName, seatCategory, price);
+                ticketManager.updateTicket(index, updatedTicket);
+                updateTicketList();
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "El precio debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (IllegalArgumentException ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void updateTicketList() {
